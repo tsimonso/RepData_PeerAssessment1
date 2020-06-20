@@ -126,11 +126,12 @@ activity%>%
         select(steps,date,interval)->activity #drop the string variable 'date_str'
 ```
 
-The variable 'interval' contains information on the time of the day (in hours and minutes) at which the measurements were done, but the format (integer) is not appropriate and is not easy to read.  
+The variable 'interval' contains information on the time of the day (in hours and minutes) at which the measurements were done, but the format (integer) is not appropriate and is not easy to read:
 
-    * There is no separation between hours and minutes  
-    * The number of digits varies between 1 and 4, because there are no leading zeros for hours (before 10:00AM) and for minutes (before 00:10AM).  
-    
+* There is no separation between hours and minutes.
+* The number of digits varies between 1 and 4, because there are no leading zeros for hours (before 10:00AM) and for minutes (before 00:10AM).
+
+
 Let's start by converting it to 'chr' and adding leading zeros to obtain a consistant 4-digit format.  
 
 ```r
@@ -427,10 +428,10 @@ activity%>%
 As we can see, there were missing data on 8 of the 61 days. On these 8 days, there is not a single 5-minute interval with data on the number of steps taken.
 The days have either complete data or no data at all.  
 
-The imputation strategy is as follows:  
+The imputation strategy is as follows:
 
-* Calculate the mean number of steps for each one of the 288 intervals across all the 53 days available.  
-* In the 8 days with no data on steps, impute the rounded value of those means to each corresponding interval.  
+* Calculate the mean number of steps for each one of the 288 intervals across all the 53 days available.
+* In the 8 days with no data on steps, impute the rounded value of those means to each corresponding interval.
 
 
 
