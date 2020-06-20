@@ -33,7 +33,7 @@ knitr::opts_knit$set(root.dir = file.path(wd,o))
 ### R version and required packages
 
 
-```{r include=FALSE}
+```{r message=FALSE}
 # Note about some of the attached packages:  
 # - 'chron' ('times' format that is very useful when dealing with times with no dates.)  
 # - 'finalfit' ('missing_plot' and other great tools that deal with missing values.)  
@@ -51,7 +51,7 @@ rm(p)
 
 For this project, I have used R version `r getRversion()` and the following packages:  
 (from the latest to the first attached, along with their version numbers).
-```{r echo=FALSE}
+```{r}
 packagesVersions<-function(){
         search()[grepl("package:",search())]%>%
                 sub(pattern="package:",replacement="")->Packages
@@ -135,8 +135,6 @@ activity%>%
         mutate(interval_chr=paste(hh,mm,sep=":"))%>%
         mutate(interval_t=times(paste0(interval_chr, ":00")))%>% # 'chron' package 
         select(-c(hh,mm))->activity # We discard the variables for hours and minutes
-```
-```{r}
 str(activity)
 ```
 The data are now in the appropriate formats and are ready for analysis.

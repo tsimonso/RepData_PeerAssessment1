@@ -374,8 +374,33 @@ summary {
 <hr />
 <div id="r-version-and-required-packages" class="section level3">
 <h3>R version and required packages</h3>
+<pre class="r"><code># Note about some of the attached packages:  
+# - &#39;chron&#39; (&#39;times&#39; format that is very useful when dealing with times with no dates.)  
+# - &#39;finalfit&#39; (&#39;missing_plot&#39; and other great tools that deal with missing values.)  
+# - &#39;forcats&#39; (&#39;fct_collapse&#39; and other useful tools to work on factor variables.)  
+# - &#39;stringr&#39; (&#39;str_match_all&#39; for patterns extraction)  
+# - &#39;scales&#39; (&#39;scale_x_chron&#39; completes ggplot2, helping with time formats on the x axis)
+
+requiredPackages = c(&quot;readr&quot;,&quot;reader&quot;, &quot;dplyr&quot;, &quot;data.table&quot;, &quot;lubridate&quot;, &quot;chron&quot;,&quot;finalfit&quot;,&quot;ggplot2&quot;,&quot;forcats&quot;,&quot;stringr&quot;,&quot;scales&quot;)
+for(p in requiredPackages){
+        if(!require(p,character.only = TRUE)) install.packages(p)
+        library(p,character.only = TRUE)
+}
+rm(p)</code></pre>
 <p>For this project, I have used R version 4.0.0 and the following packages:<br />
 (from the latest to the first attached, along with their version numbers).</p>
+<pre class="r"><code>packagesVersions&lt;-function(){
+        search()[grepl(&quot;package:&quot;,search())]%&gt;%
+                sub(pattern=&quot;package:&quot;,replacement=&quot;&quot;)-&gt;Packages
+        Versions &lt;- character(length = length(Packages))
+        for(i in seq_along(Packages)){
+                Versions[i]&lt;-paste(packageVersion(Packages[i]),collapse=&quot;.&quot;)
+        }
+        Versions&lt;-unlist(Versions)
+        cbind(Packages,Versions)
+}
+
+knitr::kable(packagesVersions())</code></pre>
 <table>
 <thead>
 <tr class="header">
@@ -510,8 +535,8 @@ activity$mm&lt;-unlist(str_match_all(activity$interval,&quot;[0-9][0-9]$&quot;))
 activity%&gt;%
         mutate(interval_chr=paste(hh,mm,sep=&quot;:&quot;))%&gt;%
         mutate(interval_t=times(paste0(interval_chr, &quot;:00&quot;)))%&gt;% # &#39;chron&#39; package 
-        select(-c(hh,mm))-&gt;activity # We discard the variables for hours and minutes</code></pre>
-<pre class="r"><code>str(activity)</code></pre>
+        select(-c(hh,mm))-&gt;activity # We discard the variables for hours and minutes
+str(activity)</code></pre>
 <pre><code>## &#39;data.frame&#39;:    17568 obs. of  5 variables:
 ##  $ steps       : int  NA NA NA NA NA NA NA NA NA NA ...
 ##  $ date        : Date, format: &quot;2012-10-01&quot; &quot;2012-10-01&quot; &quot;2012-10-01&quot; &quot;2012-10-01&quot; ...

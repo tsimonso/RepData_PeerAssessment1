@@ -24,9 +24,41 @@ output:
 
 
 
+```r
+# Note about some of the attached packages:  
+# - 'chron' ('times' format that is very useful when dealing with times with no dates.)  
+# - 'finalfit' ('missing_plot' and other great tools that deal with missing values.)  
+# - 'forcats' ('fct_collapse' and other useful tools to work on factor variables.)  
+# - 'stringr' ('str_match_all' for patterns extraction)  
+# - 'scales' ('scale_x_chron' completes ggplot2, helping with time formats on the x axis)
+
+requiredPackages = c("readr","reader", "dplyr", "data.table", "lubridate", "chron","finalfit","ggplot2","forcats","stringr","scales")
+for(p in requiredPackages){
+        if(!require(p,character.only = TRUE)) install.packages(p)
+        library(p,character.only = TRUE)
+}
+rm(p)
+```
 
 For this project, I have used R version 4.0.0 and the following packages:  
 (from the latest to the first attached, along with their version numbers).
+
+```r
+packagesVersions<-function(){
+        search()[grepl("package:",search())]%>%
+                sub(pattern="package:",replacement="")->Packages
+        Versions <- character(length = length(Packages))
+        for(i in seq_along(Packages)){
+                Versions[i]<-paste(packageVersion(Packages[i]),collapse=".")
+        }
+        Versions<-unlist(Versions)
+        cbind(Packages,Versions)
+}
+
+knitr::kable(packagesVersions())
+```
+
+
 
 Packages     Versions 
 -----------  ---------
@@ -130,9 +162,6 @@ activity%>%
         mutate(interval_chr=paste(hh,mm,sep=":"))%>%
         mutate(interval_t=times(paste0(interval_chr, ":00")))%>% # 'chron' package 
         select(-c(hh,mm))->activity # We discard the variables for hours and minutes
-```
-
-```r
 str(activity)
 ```
 
@@ -210,7 +239,7 @@ par(adj = 0) #left justification for the note below
 title(sub=paste("N=",nrN, ", NA=",nrNA))
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-9-1.png)<!-- -->
+![](PA1_template_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
 
 The distribution is more or less symmetrical. The step count fell between 10,000 and 15,000 more often than not. There is no data for 8 of the 61 days.
   
@@ -298,7 +327,7 @@ g<-ggplot(intervalActivity,aes(interval_t,steps_mean))+
 g
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
+![](PA1_template_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
 
 The figure shows a large peak in the morning followed by smaller peaks in the afternoon.  
 
@@ -370,7 +399,7 @@ activity%>%
         missing_plot()
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-15-1.png)<!-- -->
+![](PA1_template_files/figure-html/unnamed-chunk-14-1.png)<!-- -->
 
 
 ```r
@@ -454,7 +483,7 @@ par(adj = 0)
 title(sub=paste("N=",nrNwi))
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-18-1.png)<!-- -->
+![](PA1_template_files/figure-html/unnamed-chunk-17-1.png)<!-- -->
 
 ```r
 ## Calculate and report the mean and median of the total number of steps taken per day
@@ -535,7 +564,7 @@ g<-ggplot(patternActivityWeekday,aes(interval_t,steps))+
 g
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-20-1.png)<!-- -->
+![](PA1_template_files/figure-html/unnamed-chunk-19-1.png)<!-- -->
   
 
 
