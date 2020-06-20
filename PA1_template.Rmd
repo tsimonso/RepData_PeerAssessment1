@@ -1,25 +1,402 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Reproduceable Research - Project1"
+author: "Thomas Simonson"
+date: "18/06/2020"
+output: md_document
 ---
 
+```{r include=FALSE}
+wd<<-"C:/Users/thoma/OneDrive/Documents/R/projects/Reproduceable research/Coursera_reprodResearch_courseProject1"
+o<<-"original"
+d<<-"datasets"
+s<<-"scripts"
+g<<-"graphs"
+m<<-"markdown"
+Sys.setlocale("LC_TIME", "C")           #language settings for time and date -> English
+```
 
-## Loading and preprocessing the data
-
-
-
-## What is mean total number of steps taken per day?
-
-
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_knit$set(root.dir = file.path(wd,o))
+```
 
 
-## Are there differences in activity patterns between weekdays and weekends?
+
+&nbsp;  
+
+
+&nbsp;  
+
+---
+
+### R version and required packages
+
+
+```{r include=FALSE}
+# Note about some of the attached packages:  
+# - 'chron' ('times' format that is very useful when dealing with times with no dates.)  
+# - 'finalfit' ('missing_plot' and other great tools that deal with missing values.)  
+# - 'forcats' ('fct_collapse' and other useful tools to work on factor variables.)  
+# - 'stringr' ('str_match_all' for patterns extraction)  
+# - 'scales' ('scale_x_chron' completes ggplot2, helping with time formats on the x axis)
+
+requiredPackages = c("readr","reader", "dplyr", "data.table", "lubridate", "chron","finalfit","ggplot2","forcats","stringr","scales")
+for(p in requiredPackages){
+        if(!require(p,character.only = TRUE)) install.packages(p)
+        library(p,character.only = TRUE)
+}
+rm(p)
+```
+
+For this project, I have used R version `r getRversion()` and the following packages:  
+(from the latest to the first attached, along with their version numbers).
+```{r echo=FALSE}
+packagesVersions<-function(){
+        search()[grepl("package:",search())]%>%
+                sub(pattern="package:",replacement="")->Packages
+        Versions <- character(length = length(Packages))
+        for(i in seq_along(Packages)){
+                Versions[i]<-paste(packageVersion(Packages[i]),collapse=".")
+        }
+        Versions<-unlist(Versions)
+        cbind(Packages,Versions)
+}
+
+knitr::kable(packagesVersions())
+```
+
+
+
+&nbsp;
+
+
+&nbsp;
+
+---
+
+### 1) Loading and preprocessing the data
+
+
+
+&nbsp;  
+
+**TASK 1.1. Load the data**
+
+```{r loading and processing}
+activity<-read.csv("activity.csv")
+str(activity)
+```
+
+
+
+&nbsp;  
+
+**TASK 1.2. Process/transform the data**  
+We need to convert the format of the dates from 'chr' to 'Date'.
+```{r}
+activity%>%
+        rename(date_str=date) %>% #rename the string variable 'date' as 'date_str'
+        mutate(date=ymd(date_str)) %>% #create the variable 'date' formatted as a date
+        select(steps,date,interval)->activity #drop the string variable 'date_str'
+```
+
+The variable 'interval' contains information on the time of the day (in hours and minutes) at which the measurements were done, but the format (integer) is not appropriate and is not easy to read.  
+
+    * There is no separation between hours and minutes  
+    * The number of digits varies between 1 and 4, because there are no leading zeros for hours (before 10:00AM) and for minutes (before 00:10AM).  
+    
+Let's start by converting it to 'chr' and adding leading zeros to obtain a consistant 4-digit format.  
+```{r}
+# The variable is converted from 'int' to 'chr'
+activity$interval<-as.character(activity$interval)
+
+# We calculate the number of values with less than 4 digits
+not4digits<-sum(!grepl("^([0-9]{4})",activity$interval))
+
+# We use this loop to add leading zeros to the values with less than 4 digits.
+while(not4digits>0){
+        activity$interval[!grepl("^([0-9]{4})",activity$interval)]<-paste("0",activity$interval[!grepl("^([0-9]{4})",activity$interval)],sep="")
+        not4digits<-sum(!grepl("^([0-9]{4})",activity$interval)) # Nr of values with <4 digits recalculated
+}
+```
+
+We will now separate hours and minutes and use the resulting 'chr' variable to create a new 'times' variable: 'interval_t'.
+```{r}
+# We extract the hours (encoded in the first two digits)
+activity$hh<-unlist(str_match_all(activity$interval,"^[0-9][0-9]"))
+
+# We extract the minutes (encoded in the last two digits)
+activity$mm<-unlist(str_match_all(activity$interval,"[0-9][0-9]$"))
+
+# We use these two variables to create a new character variable containing the time (HH:MM)
+# and a new 'times' variable (HH:MM:SS, package 'chron') that allows encoding times without dates.
+activity%>%
+        mutate(interval_chr=paste(hh,mm,sep=":"))%>%
+        mutate(interval_t=times(paste0(interval_chr, ":00")))%>% # 'chron' package 
+        select(-c(hh,mm))->activity # We discard the variables for hours and minutes
+```
+```{r}
+str(activity)
+```
+The data are now in the appropriate formats and are ready for analysis.
+
+
+
+&nbsp;  
+
+
+&nbsp;  
+
+---
+
+### 2) What is mean total number of steps taken per day?
+
+
+
+&nbsp;  
+
+**TASK 2.1. Calculate the total number of steps taken per day**
+
+```{r}
+activity%>%
+        group_by(date)%>%
+        summarise(steps=sum(steps))->dailyActivity
+dailyActivity<-as.data.frame(dailyActivity)
+
+str(dailyActivity)
+head(dailyActivity)
+```
+
+
+
+&nbsp;  
+
+**TASK 2.2. Make a histogram of the total number of steps taken each day**
+```{r}
+nrNA<-sum(!complete.cases(dailyActivity))
+nrN<-sum(complete.cases(dailyActivity))
+hist(dailyActivity$steps,ylim=c(0,40),
+     main="Distribution of daily activity \n (without imputation)",
+     xlab="Number of steps",ylab="Frequency")
+par(adj = 0) #left justification for the note below
+title(sub=paste("N=",nrN, ", NA=",nrNA))
+```
+
+The distribution is more or less symmetrical. The step count fell between 10,000 and 15,000 more often than not. There is no data for `r nrNA` of the `r nrNA+nrN` days.
+  
+
+
+&nbsp;  
+
+**TASK 2.3. Calculate and report the mean and median of the total number of steps taken per day**
+```{r}
+(dailyActivity_summary<-summary(dailyActivity$steps))
+```
+The mean number of steps per day was `r sprintf("%.0f",mean(dailyActivity$steps,na.rm=T))`, the median was `r median(dailyActivity$steps,na.rm=T)`.
+
+
+
+&nbsp;  
+
+
+&nbsp;  
+
+---
+
+### 3) What is the average daily activity pattern?
+
+
+
+&nbsp;  
+
+**TASK 3.1. Make a time series plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)**
+
+Prepare the data
+
+```{r}
+activity%>%
+        group_by(interval_t)%>%
+        summarise(steps_mean=mean(steps,na.rm=TRUE))->intervalActivity
+intervalActivity<-as.data.frame(intervalActivity)
+
+str(intervalActivity)
+head(intervalActivity)
+```
+
+Plot the data
+
+```{r}
+## plot
+Nobs<-sum(complete.cases(activity))
+Ndays<-nrow(dailyActivity[!is.na(dailyActivity$steps),]) #number of days with complete data
+
+g<-ggplot(intervalActivity,aes(interval_t,steps_mean))+
+        geom_line()+
+        ggtitle("Pattern of activity along the day")+
+        xlab("Time of the day")+
+        ylab("Average level of activity per 5-minute interval \n(Number of steps)")+
+        labs(caption=paste("Number of days =", Ndays,"\nTotal number of intervals =", Nobs))+
+        scale_x_chron(format="%H:%M")
+g
+```
+
+The figure shows a large peak in the morning followed by smaller peaks in the afternoon.  
+
+
+
+&nbsp;  
+
+**TASK 3.2. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?**
+
+To Answer that question, we will look in the 'intervalActivity' dataset and extract the row with the highest average number of steps
+```{r}
+intervalActivity[intervalActivity$steps_mean==max(intervalActivity$steps_mean),]
+```
+The highest average number of steps was 206 and occurred during the interval between 8:35 and 8:40 AM.
+
+
+
+&nbsp;  
+
+
+&nbsp;  
+
+
+---
+
+### 4) Imputting missing values
+
+
+
+
+&nbsp;  
+
+**TASK 4.1 Calculate and report the total number of missing values in the dataset**
+```{r}
+# Number of rows with missing data
+sum(!complete.cases(activity)) 
+```
+
+
+
+&nbsp;  
+
+**TASK 4.2 Devise a strategy for filling in all of the missing values in the dataset.** 
+We will first explore how the missing values are distributed.
+```{r}
+# Proportion of rows with missing data on 'steps'.
+sum(is.na(activity$steps))/length(activity$steps)
+
+activity%>%
+        select(-interval)%>%
+        missing_plot()
+```
+
+```{r}
+activity%>%
+        group_by(date)%>%
+        summarise(steps=sum(steps),stepsNArm=sum(steps, na.rm = TRUE))%>% #The value in the first column will be NA if there are NAs that day, The value in the second column will be the total number of steps that day, ignoring the NAs
+        filter(is.na(steps))%>%
+        mutate(weekday=weekdays(date))%>%
+        select(weekday,date,steps,stepsNArm)
+```
+As we can see, there were missing data on 8 of the 61 days. On these 8 days, there is not a single 5-minute interval with data on the number of steps taken.
+The days have either complete data or no data at all.  
+
+The imputation strategy is as follows:  
+
+* Calculate the mean number of steps for each one of the 288 intervals across all the 53 days available.  
+* In the 8 days with no data on steps, impute the rounded value of those means to each corresponding interval.  
+
+
+
+&nbsp;  
+
+**TASK 4.3 Create a new dataset that is equal to the original dataset but with the missing data filled in.**
+```{r}
+#prepare for imputation
+activity_imputation<-full_join(activity,intervalActivity,by="interval_t") #merge (many-to-one) the dataset with the average step counts of the 288 intervals.
+activity_imputation%>%
+        mutate(imputation=is.na(steps))->activity_imputation #create a logical vector that identifies the rows with missing data
+
+#do the imputation
+activity_imputation[activity_imputation$imputation==TRUE,]$steps<-round(activity_imputation[activity_imputation$imputation==TRUE,]$steps_mean) # in the rows identified, we impute to the variable 'steps' the mean number of steps for that interval, 'steps_mean', averaged across the 53 days with data and rounded to the nearest unit.
+
+activity_imputation%>%
+        select(date, interval_t, imputation,steps_mean, steps)%>%
+        head()
+```
+
+
+
+&nbsp;  
+
+**TASK 4.4 Make a histogram of the total number of steps taken each day**
+```{r}
+## Calculate the total number of steps taken per day
+activity_imputation%>%
+        group_by(date)%>%
+        summarise(steps=sum(steps))->dailyActivity_wImputation
+
+## Make a histogram of the total number of steps taken each day
+nrNwi<-sum(complete.cases(dailyActivity_wImputation))
+hist(dailyActivity_wImputation$steps,ylim=c(0,40),
+     main="Distribution of daily activity \n (with imputation)",
+     xlab="Number of steps",ylab="Frequency")
+par(adj = 0)
+title(sub=paste("N=",nrNwi))
+
+## Calculate and report the mean and median of the total number of steps taken per day
+summary(dailyActivity_wImputation$steps)
+```
+
+
+&nbsp;  
+
+
+&nbsp;  
+
+
+---
+
+### 5) Are there differences in activity patterns between weekdays and weekends?  
+
+
+
+
+&nbsp;  
+
+**TASK 5.1 Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.**  
+
+```{r}
+activity_imputation%>%
+        mutate(weekday7=factor(weekdays(date),levels=c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")))%>%
+        mutate(weekday2=fct_collapse(weekday7, Weekday = c("Monday","Tuesday","Wednesday","Thursday","Friday"), Weekend = c("Saturday","Sunday")))%>%
+        group_by(interval_t,weekday2)%>%
+        summarise(steps=mean(steps,na.rm=TRUE))->patternActivityWeekday
+patternActivityWeekday<-as.data.frame(patternActivityWeekday)
+str(patternActivityWeekday)
+head(patternActivityWeekday)
+```
+  
+  
+
+
+&nbsp;  
+
+**TASK 5.2 Make a panel plot containing a time series plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).**  
+```{r}
+g<-ggplot(patternActivityWeekday,aes(interval_t,steps))+
+        geom_line()+
+        facet_grid(.~weekday2)+
+        ggtitle("Activity pattern on weekdays and weekends")+
+        xlab("Interval")+
+        ylab("Average level of activity per 5-minute interval \n(Number of steps)")+
+        scale_x_chron(format="%H:%M")
+g
+```
+  
+
+
+&nbsp;  
+
+We observe that on weekdays, there is a large peak around 8:30 AM, followed by smaller peaks in the afternoon, whereas on weekends, the activity is more evenly distributed along the day.
